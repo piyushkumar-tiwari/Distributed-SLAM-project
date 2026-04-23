@@ -1,0 +1,58 @@
+<launch>
+    <arg name="set_lio_type" default="2"/> 
+    
+    <param name="/number_of_robots" value="2"/>
+    
+    <arg name="set_respawn_value" default="false"/>
+
+    <node pkg="rviz" type="rviz" name="dcl_rviz" args="-d $(find dcl_slam)/config/dcl_rviz.rviz" />
+    <node pkg="dcl_slam" type="loop_visualization_node" name="loop_visualization_node" output="screen"/>
+
+
+    <include file="$(find dcl_slam)/launch/single_ugv.launch">
+        <arg name="robotPrefix" value="a"/>
+        <arg name="respawnValue" value="$(arg set_respawn_value)"/>
+        <arg name="lioType" value="$(arg set_lio_type)"/>
+        
+        <remap from="/livox/lidar" to="/a/velodyne_points"/>
+    </include>
+
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_a" output="screen">
+        <param name="use_mag" value="false"/>
+        <param name="publish_tf" value="false"/>
+        <param name="world_frame" value="enu"/>
+        
+        <remap from="imu/data_raw" to="/a/imu/raw"/>
+        <remap from="imu/data" to="/a/imu/data"/>
+    </node>
+
+
+    <include file="$(find dcl_slam)/launch/single_ugv.launch">
+        <arg name="robotPrefix" value="b"/>
+        <arg name="respawnValue" value="$(arg set_respawn_value)"/>
+        <arg name="lioType" value="$(arg set_lio_type)"/>
+        
+        <remap from="/livox/lidar" to="/b/velodyne_points"/>
+    </include>
+
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_b" output="screen">
+        <param name="use_mag" value="false"/>
+        <param name="publish_tf" value="false"/>
+        <param name="world_frame" value="enu"/>
+        
+        <remap from="imu/data_raw" to="/b/imu/raw"/>
+        <remap from="imu/data" to="/b/imu/data"/>
+    </node>
+
+
+    <arg name="bag_file" value="/home/dheer/merged_swarm.bag"/>
+
+    <node name="player" pkg="rosbag" type="play" output="screen" 
+          args="--clock -r 0.5 -q -d 2 $(arg bag_file)">
+        
+        <remap from="/a/imu/data" to="/a/imu/raw"/>
+        <remap from="/b/imu/data" to="/b/imu/raw"/>
+        
+        </node>
+
+</launch>

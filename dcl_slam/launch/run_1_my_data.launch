@@ -1,0 +1,55 @@
+<launch>
+    <arg name="set_lio_type" default="2"/> <!-- 1 for LIO-SAM
+                                            2 for FAST-LIO2 -->
+    
+    <!-- CHANGED: Set number of robots to 1 -->
+    <param name="/number_of_robots" value="1"/>
+    
+    <arg name="set_respawn_value" default="false"/>  <!-- boolean: true, false -->
+
+    <!--- rviz -->
+    <node pkg="rviz" type="rviz" name="dcl_rviz" args="-d $(find dcl_slam)/config/dcl_rviz.rviz" />
+    <node pkg="dcl_slam" type="loop_visualization_node" name="loop_visualization_node" output="screen"/>
+
+
+    <!-- Robot list -->
+      <!-- Robot A (Active) -->
+      <include file="$(find dcl_slam)/launch/single_ugv.launch">
+        <arg name="robotPrefix" value="a"/>
+        <arg name="respawnValue" value="$(arg set_respawn_value)"/>
+        <arg name="lioType" value="$(arg set_lio_type)"/>
+      </include>
+
+      <!-- CHANGED: Robot B commented out -->
+      <!-- 
+      <include file="$(find dcl_slam)/launch/single_ugv.launch">
+        <arg name="robotPrefix" value="b"/>
+        <arg name="respawnValue" value="$(arg set_respawn_value)"/>
+        <arg name="lioType" value="$(arg set_lio_type)"/>
+      </include>
+      -->
+
+    <!-- rosbag player node ->> you need to change bag file here!!! -->
+
+    <!-- Define the path to your converted bag file -->
+    <arg name="bag_file" value="/home/dheer/2025-11-29-18-24-08.bag"/>
+
+    <!-- Remap topics from the bag (Alpha) to what SLAM expects (a) -->
+    <!-- CHANGED: Only remapping Alpha/a, commented out Bob/b -->
+    <remap from="/livox/lidar" to="/a/velodyne_points"/>
+    <!-- <remap from="/Bob/velodyne_points" to="/b/velodyne_points"/> -->
+    
+    <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_node" output="screen">
+        <param name="use_mag" value="false"/>  <param name="publish_tf" value="false"/>
+        <param name="world_frame" value="enu"/>
+        
+        <remap from="imu/data_raw" to="/livox/imu"/>
+        
+        <remap from="imu/data" to="/a/imu/data"/>
+    </node>
+    <!-- <remap from="/Bob/imu/data" to="/b/imu/data"/> -->
+
+    <node name="player" pkg="rosbag" type="play" output="screen" 
+      args="--clock -r 1 -q -d 2 $(arg bag_file)"/>
+
+</launch>
